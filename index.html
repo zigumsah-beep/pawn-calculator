@@ -194,15 +194,27 @@ function calc(){
 
 const MN=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const MA=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const sk=x=>x.replace(/[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E.]/g,'');
+function lev(a,b){const d=Array.from({length:a.length+1},(_,i)=>[i]);for(let j=1;j<=b.length;j++)d[0][j]=j;
+  for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  return d[a.length][b.length]}
+function guessMonth(txt){
+  const x=sk(txt);let best=-1,bs=9;
+  for(let i=0;i<12;i++)for(const n of [MN[i],MA[i]]){const k=sk(n),sc=lev(x,k)/Math.max(x.length,k.length);if(sc<bs){bs=sc;best=i}}
+  return bs<=0.6?{m:best,sc:bs}:null;
+}
 function parseCard(raw){
   const t=raw.replace(/[๐-๙]/g,c=>c.charCodeAt(0)-3664).replace(/\s+/g,'');
-  const alt=MN.concat(MA).map(x=>x.replace(/\./g,'\\.')).join('|');
-  const out={dates:[]};
-  for(const m of t.matchAll(new RegExp('(\\d{1,2})('+alt+')(\\d{4})','g'))){
-    const idx=MN.indexOf(m[2])>=0?MN.indexOf(m[2]):MA.indexOf(m[2]);
-    let y=+m[3];if(y>2400)y-=543;
-    out.dates.push(y+'-'+String(idx+1).padStart(2,'0')+'-'+m[1].padStart(2,'0'));
+  const out={dates:[],warn:false},found=[];
+  const fy=y=>{y=+y;return y>2400?y-543:y};
+  const iso=(y,m,d)=>fy(y)+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+  for(const m of t.matchAll(/(\d{1,2})([^\d]{2,14}?)(25\d{2}|20\d{2})/g)){
+    const g=guessMonth(m[2]);
+    if(g){found.push({pos:m.index,v:iso(m[3],g.m+1,m[1])});if(g.sc>0.3)out.warn=true}
   }
+  for(const m of t.matchAll(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](25\d{2}|20\d{2})/g))found.push({pos:m.index,v:iso(m[3],m[2],m[1])});
+  found.sort((a,b)=>a.pos-b.pos);
+  out.dates=found.map(f=>f.v);
   const a=t.match(/เป็นเงิน([\d,\.]+)/)||t.match(/([\d,]{4,})\(/);
   if(a){const v=parseFloat(a[1].replace(/,/g,''));if(v>0)out.amt=v}
   const tm=t.match(/กำหนด(\d+(?:\.\d+)?)เดือน/);
@@ -231,7 +243,7 @@ async function readPhoto(file){
     syncDue();
     if(o.dates[1]){$('due').value=o.dates[1];got.push('วันครบกำหนด');
       if(!o.term&&o.dates[0]){const[y1,m1]=o.dates[0].split('-').map(Number),[y2,m2]=o.dates[1].split('-').map(Number);$('term').value=(y2*12+m2)-(y1*12+m1)}}
-    st.textContent=got.length?'อ่านได้: '+got.join(', ')+' — โปรดตรวจตัวเลขกับบัตรก่อนใช้':'อ่านไม่ออก ลองถ่ายใหม่ให้ชัด หรือกรอกเอง';
+    st.textContent=(got.length?'อ่านได้: '+got.join(', ')+(o.warn?' (ตรวจเดือนอีกครั้ง)':'')+' — โปรดตรวจกับบัตรก่อนใช้':'อ่านไม่ออก ลองถ่ายใหม่ให้ชัด หรือกรอกเอง')+(!o.dates[0]&&got.length?' | วันที่อ่านไม่ได้ กรอกเอง':'');
     calc();
   }catch(e){st.textContent='อ่านรูปไม่สำเร็จ กรอกข้อมูลเองได้เลย'}
 }
