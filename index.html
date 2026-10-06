@@ -70,12 +70,12 @@ summary{cursor:pointer;padding:2px 0}
 
 <div class="card">
 <div class="row">
-<div><label for="d1" style="margin-top:0">วันที่รับฝาก</label><input type="date" id="d1"></div>
-<div><label for="d2" id="l2" style="margin-top:0">วันที่มาไถ่ถอน</label><input type="date" id="d2"></div>
+<div><label for="d1" style="margin-top:0">วันที่รับฝาก</label><input type="date" id="d1"><div class="note" id="n1"></div></div>
+<div><label for="d2" id="l2" style="margin-top:0">วันที่มาไถ่ถอน</label><input type="date" id="d2"><div class="note" id="n2"></div></div>
 </div>
 <div class="row" id="renewBox" hidden>
 <div><label for="term">กำหนด (เดือน)</label><input type="number" id="term" value="2" min="1" step="any" inputmode="decimal"></div>
-<div><label for="due">วันครบกำหนด</label><input type="date" id="due"></div>
+<div><label for="due">วันครบกำหนด</label><input type="date" id="due"><div class="note" id="n3"></div></div>
 </div>
 <div class="bigdays" id="daysNote"></div>
 <label for="amt">ราคารับฝาก (บาท)</label>
@@ -138,6 +138,8 @@ function calc(){
   $('l2').textContent=renew?'วันที่มาต่อดอก':'วันที่มาไถ่ถอน';
   $('tLbl').textContent=renew?'ยอดต่อดอก (ดอกเบี้ยที่ต้องจ่าย)':'ยอดไถ่ถอนรวม';
   const a=$('d1').value,b=$('d2').value,due=$('due').value;
+  const tl=v=>{if(!v)return '';const [y,m,d]=v.split('-').map(Number);return d+' '+MN[m-1]+' '+(y+543)};
+  $('n1').textContent=tl(a);$('n2').textContent=tl(b);$('n3').textContent=renew?tl(due):'';
   const amt=parseFloat($('amt').value)||0;
   const big=amt>=100000;
   if(big)document.querySelector('input[name=rate][value="1.25"]').checked=true;
